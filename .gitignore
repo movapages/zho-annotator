@@ -1,0 +1,47 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Large dictionary files (should be downloaded separately)
+enhanced_dictionary.json
+processed_dictionary.json
+merged_dictionary.json
+invalid_entries.txt
+
+# Data directories
+/data/
+*.json.bak
+*.txt.bak
+
+# Build artifacts
+*.so
+*.dll
+*.dylib
+*.exe
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Backup files
+*.bak
+*.backup
