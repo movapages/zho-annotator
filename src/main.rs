@@ -47,7 +47,7 @@ fn main() -> Result<()> {
                 .long("format")
                 .value_name("FORMAT")
                 .default_value("inline")
-                .help("Output format: inline, json, brackets, ruby, table"),
+                .help("Output format: inline, json, brackets, ruby, table, rows"),
         )
         .arg(
             Arg::new("style")
@@ -190,6 +190,7 @@ fn parse_config(matches: &ArgMatches) -> Result<AnnotationConfig> {
         "brackets" => OutputFormat::Brackets,
         "ruby" => OutputFormat::Ruby,
         "table" => OutputFormat::Table,
+        "rows" => OutputFormat::Rows,
         _ => {
             eprintln!("❌ Invalid format. Using 'inline'");
             OutputFormat::Inline

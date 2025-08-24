@@ -20,6 +20,7 @@ pub enum OutputFormat {
     Brackets, // 我[wǒ]爱[ài]中国[zhōng guó]
     Ruby,     // <ruby>我<rt>wǒ</rt></ruby>
     Table,    // Tabular format for analysis
+    Rows,     // Two rows: Chinese text on top, pinyin below
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -181,6 +182,7 @@ impl ProductionAnnotator {
             OutputFormat::Brackets => self.format_brackets(segments),
             OutputFormat::Ruby => self.format_ruby(segments),
             OutputFormat::Table => self.format_table(segments),
+            OutputFormat::Rows => self.format_rows(segments),
         }
     }
 
@@ -373,6 +375,95 @@ impl ProductionAnnotator {
         }
 
         result
+    }
+
+    fn format_rows(&self, segments: &[AnnotatedSegment]) -> String {
+        let mut text_segments = Vec::new();
+        let mut pinyin_segments = Vec::new();
+
+        for segment in segments {
+            if segment.is_chinese && segment.confidence >= self.config.confidence_threshold {
+                let annotation = match self.config.annotation_style {
+                    AnnotationStyle::Pinyin => segment.pinyin.as_ref(),
+                    AnnotationStyle::Zhuyin => segment.zhuyin.as_ref(),
+                    AnnotationStyle::Both => segment.pinyin.as_ref(), // Primary annotation
+                };
+
+                text_segments.push(segment.text.clone());
+
+                if let Some(ann) = annotation {
+                    // Remove spaces for cleaner alignment
+                    let clean_annotation = ann.replace(" ", "");
+                    pinyin_segments.push(clean_annotation);
+                } else {
+                    pinyin_segments.push(String::new());
+                }
+            } else if !segment.text.trim().is_empty() {
+                // Include non-Chinese text (punctuation, spaces, etc.)
+                text_segments.push(segment.text.clone());
+                pinyin_segments.push(String::new()); // Empty pinyin for non-Chinese
+            }
+        }
+
+        // Calculate the display width needed for each column
+        let mut column_widths = Vec::new();
+        for i in 0..text_segments.len() {
+            let text_width = self.display_width(&text_segments[i]);
+            let pinyin_width = self.display_width(&pinyin_segments[i]);
+            column_widths.push(text_width.max(pinyin_width));
+        }
+
+        // Build aligned rows
+        let mut text_line = String::new();
+        let mut pinyin_line = String::new();
+
+        for i in 0..text_segments.len() {
+            if i > 0 {
+                text_line.push_str("  "); // 2 spaces between columns
+                pinyin_line.push_str("  ");
+            }
+
+            let text_width = self.display_width(&text_segments[i]);
+            let pinyin_width = self.display_width(&pinyin_segments[i]);
+            let column_width = column_widths[i];
+
+            // Add text with padding
+            text_line.push_str(&text_segments[i]);
+            text_line.push_str(&" ".repeat(column_width - text_width));
+
+            // Add pinyin with padding
+            pinyin_line.push_str(&pinyin_segments[i]);
+            pinyin_line.push_str(&" ".repeat(column_width - pinyin_width));
+        }
+
+        format!("{}\n{}", text_line, pinyin_line)
+    }
+
+    /// Calculate display width for terminal output (Chinese chars = 2, Latin = 1)
+    fn display_width(&self, text: &str) -> usize {
+        text.chars()
+            .map(|c| {
+                // Chinese characters and other full-width characters take 2 columns
+                if self.is_chinese_char(c) || self.is_fullwidth_char(c) {
+                    2
+                } else {
+                    1
+                }
+            })
+            .sum()
+    }
+
+    /// Check if character is full-width (takes 2 columns in terminal)
+    fn is_fullwidth_char(&self, c: char) -> bool {
+        matches!(c as u32,
+            // Full-width punctuation and symbols
+            0xFF01..=0xFF60 |   // Full-width ASCII variants
+            0xFFE0..=0xFFE6 |   // Full-width currency symbols
+            // Additional full-width ranges
+            0x3000..=0x303F |   // CJK punctuation
+            0x2E80..=0x2EFF |   // CJK radicals supplement
+            0x2F00..=0x2FDF     // Kangxi radicals
+        )
     }
 
     fn is_chinese_char(&self, c: char) -> bool {
