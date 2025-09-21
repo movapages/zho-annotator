@@ -130,7 +130,7 @@ impl ProductionAnnotator {
                     best_zhuyin = Some(final_annotation_data[0].zhuyin.clone());
                     confidence = 0.95;
                 } else if final_annotation_data.len() > 1 {
-                    // Multiple pronunciations - choose the best one
+                    // Multiple pronunciations - use direct string matching
                     let pinyin_options: Vec<String> = final_annotation_data
                         .iter()
                         .map(|data| data.pinyin.clone())
@@ -138,8 +138,12 @@ impl ProductionAnnotator {
 
                     alternatives = pinyin_options.clone();
 
-                    // Choose the best pronunciation using heuristics
-                    let best_index = self.select_best_pronunciation(&final_annotation_data);
+                    // Direct string matching: find entry where the appropriate field matches input text
+                    let best_index = self.select_by_direct_matching(
+                        &final_annotation_data,
+                        &segment_text,
+                        use_traditional,
+                    );
                     best_pinyin = Some(final_annotation_data[best_index].pinyin.clone());
                     best_zhuyin = Some(final_annotation_data[best_index].zhuyin.clone());
                     confidence = 0.8; // Medium confidence
@@ -534,5 +538,35 @@ impl ProductionAnnotator {
 
         // If no specific rules match, return the first one
         0
+    }
+
+    /// Select pronunciation by direct string matching
+    fn select_by_direct_matching(
+        &self,
+        annotations: &[crate::dictionary::AnnotationData],
+        input_text: &str,
+        use_traditional: bool,
+    ) -> usize {
+        if annotations.is_empty() {
+            return 0;
+        }
+
+        // Direct string matching: find entry where the appropriate field matches input text
+        for (i, annotation) in annotations.iter().enumerate() {
+            if use_traditional {
+                // For Traditional input, match against traditional field
+                if annotation.traditional == input_text {
+                    return i;
+                }
+            } else {
+                // For Simplified input, match against simplified field
+                if annotation.simplified == input_text {
+                    return i;
+                }
+            }
+        }
+
+        // Fallback: if no exact match found, use the old heuristic method
+        self.select_best_pronunciation(annotations)
     }
 }

@@ -99,6 +99,35 @@ Options:
 # Output: Position	Text	Pinyin	Zhuyin	Confidence	Alternatives
 ```
 
+#### Rows (Two-line aligned)
+```bash
+./target/release/zho-annotator -t "你好世界" --format rows
+# Output:
+# 你好  世界
+# nǐhǎo shìjiè
+```
+
+### Script Specification
+
+**Important:** For accurate pronunciation, specify the script when dealing with ambiguous text:
+
+#### Traditional Chinese
+```bash
+./target/release/zho-annotator -t "激光唱片" --traditional
+# Output: 激光唱片(jīguāngchàngpiàn) - Mainland pronunciation
+```
+
+#### Auto-detection (Default)
+```bash
+./target/release/zho-annotator -t "激光唱片"
+# Output: 激光唱片(léishèchàngpiàn) - May use Taiwan pronunciation
+```
+
+**Why this matters:**
+- Some terms exist in both Traditional and Simplified forms with different pronunciations
+- Auto-detection may choose Taiwan pronunciations for ambiguous text
+- Use `--traditional` flag when your input is Traditional Chinese for consistent results
+
 ### Advanced Usage
 
 #### File Processing
